@@ -4,7 +4,7 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/assets/js/app.js',
-  '/assets/js/mangadex.js', // Pastikan namanya api.js, bukan mangadex.js lagi
+  '/assets/js/api.js', // Pastikan namanya api.js, bukan mangadex.js lagi
   '/manifest.json'
 ];
 
