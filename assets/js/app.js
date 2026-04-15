@@ -1,11 +1,11 @@
-// assets/js/app.js
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
 }
 
-import { fetchMangaPopuler, fetchChapters, fetchChapterPages } from './mangadex.js';
+// UBAH IMPORT MENJADI api.js
+import { fetchMangaPopuler, fetchChapters, fetchChapterPages } from './api.js';
 
 const { createApp, ref, onMounted, computed } = Vue;
 
@@ -14,6 +14,9 @@ createApp({
         const mangasList = ref([]);
         const isLoading = ref(true);
         const searchQuery = ref('');
+
+        const isChapterListOpen = ref(false);
+        const chapterSortDesc = ref(true);
 
         const isReaderOpen = ref(false);
         const activeManga = ref(null);
@@ -38,8 +41,13 @@ createApp({
             return mangasList.value;
         });
 
+        const sortedChapters = computed(() => {
+            let chaps = [...activeChapters.value];
+            return chapterSortDesc.value ? chaps.reverse() : chaps;
+        });
+
         onMounted(() => {
-            cariManga('One Piece');
+            cariManga('Jujutsu Kaisen'); // Default loading keren
         });
 
         async function cariManga(query = searchQuery.value) {
@@ -48,26 +56,15 @@ createApp({
             try {
                 mangasList.value = await fetchMangaPopuler(query);
             } catch (e) {
-                // Ignore silent errors for clean UI
+                alert("Gagal memuat manga: " + e.message);
+                mangasList.value = [];
             } finally {
                 isLoading.value = false;
             }
         }
 
-        function getCoverUrl(manga) {
-            const coverRel = manga.relationships?.find(rel => rel.type === "cover_art");
-            if (coverRel && coverRel.attributes?.fileName) {
-                return `https://uploads.mangadex.org/covers/${manga.id}/${coverRel.attributes.fileName}`;
-            }
-            return "https://via.placeholder.com/200x300/111111/e50914?text=Rema";
-        }
-
-        function getTitle(manga) {
-            return manga.attributes?.title?.en || Object.values(manga.attributes?.title || {})[0] || "Tanpa Judul";
-        }
-
         function toggleFavorite(event, manga) {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             const index = favorites.value.findIndex(m => m.id === manga.id);
             if (index > -1) favorites.value.splice(index, 1);
             else favorites.value.push(manga);
@@ -82,29 +79,41 @@ createApp({
             return readHistory.value[mangaId]?.chapterNum || null;
         }
 
-        async function bukaManga(manga) {
+        async function bukaDetail(manga) {
             try {
                 const chapters = await fetchChapters(manga.id);
                 if (chapters.length === 0) {
-                    alert("Belum ada chapter untuk manga ini.");
+                    alert("Belum ada chapter terjemahan untuk manga ini.");
                     return;
                 }
                 activeChapters.value = chapters;
                 activeManga.value = manga;
-                activeMangaTitle.value = getTitle(manga);
-                currentChapterIndex.value = 0;
-                
-                const hist = readHistory.value[manga.id];
-                if (hist) {
-                    const idx = chapters.findIndex(c => c.id === hist.chapterId);
-                    if (idx > -1) currentChapterIndex.value = idx;
-                }
-
-                isReaderOpen.value = true;
-                await loadPages();
+                activeMangaTitle.value = manga.title;
+                isChapterListOpen.value = true;
             } catch (e) {
                 alert("Gagal mengambil daftar chapter.");
             }
+        }
+
+        async function bacaChapter(chapter) {
+            const idx = activeChapters.value.findIndex(c => c.id === chapter.id);
+            currentChapterIndex.value = idx > -1 ? idx : 0;
+            isChapterListOpen.value = false;
+            isReaderOpen.value = true;
+            await loadPages();
+        }
+
+        async function lanjutBaca() {
+            const hist = readHistory.value[activeManga.value.id];
+            if (hist) {
+                const idx = activeChapters.value.findIndex(c => c.id === hist.chapterId);
+                currentChapterIndex.value = idx > -1 ? idx : 0;
+            } else {
+                currentChapterIndex.value = 0;
+            }
+            isChapterListOpen.value = false;
+            isReaderOpen.value = true;
+            await loadPages();
         }
 
         async function loadPages() {
@@ -114,7 +123,7 @@ createApp({
             try {
                 const chapterData = activeChapters.value[currentChapterIndex.value];
                 const chapterId = chapterData.id;
-                const chapterNum = chapterData.attributes.chapter;
+                const chapterNum = chapterData.chapter;
 
                 currentPages.value = await fetchChapterPages(chapterId);
                 
@@ -141,8 +150,9 @@ createApp({
         }
 
         return {
-            mangasList, isLoading, searchQuery, cariManga, getCoverUrl, getTitle,
-            isReaderOpen, activeMangaTitle, activeChapters, currentChapterIndex, currentPages, isReaderLoading, errorMsg, bukaManga, gantiChapter,
+            mangasList, isLoading, searchQuery, cariManga,
+            isChapterListOpen, chapterSortDesc, sortedChapters, bukaDetail, bacaChapter, lanjutBaca,
+            isReaderOpen, activeManga, activeMangaTitle, activeChapters, currentChapterIndex, currentPages, isReaderLoading, errorMsg, gantiChapter,
             currentTab, displayedManga, toggleFavorite, isFavorite, getHistoryChapter
         }
     }
