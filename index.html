@@ -80,17 +80,17 @@
                     </button>
 
                     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-80 group-hover:opacity-100 transition-opacity z-10 flex flex-col justify-end p-4">
-                        <h3 class="font-bold text-white text-sm mb-1 line-clamp-2 leading-tight group-hover:text-blood-primary transition-colors">{{ getTitle(manga) }}</h3>
+                        <h3 class="font-bold text-white text-sm mb-1 line-clamp-2 leading-tight group-hover:text-blood-primary transition-colors">{{ manga.title }}</h3>
                         
                         <span v-if="getHistoryChapter(manga.id)" class="text-[10px] uppercase tracking-wider font-semibold text-blood-glow">
                             Lanjut: Ch. {{ getHistoryChapter(manga.id) }}
                         </span>
-                        <span v-else class="text-[10px] uppercase tracking-wider font-semibold" :class="manga.attributes.status === 'ongoing' ? 'text-gray-300' : 'text-gray-500'">
-                            {{ manga.attributes.status || 'Unknown' }}
+                        <span v-else class="text-[10px] uppercase tracking-wider font-semibold" :class="manga.status === 'Ongoing' ? 'text-gray-300' : 'text-gray-500'">
+                            {{ manga.status }}
                         </span>
                     </div>
 
-                    <img :src="getCoverUrl(manga)" :alt="getTitle(manga)" loading="lazy" 
+                    <img :src="manga.cover" :alt="manga.title" loading="lazy" 
                          class="w-full h-[280px] md:h-[320px] object-cover filter brightness-75 group-hover:brightness-100 transition-all duration-500 group-hover:scale-105">
                 </div>
             </div>
@@ -99,11 +99,11 @@
         <footer class="border-t border-blood-primary/20 bg-cinema-800/30 mt-auto py-10 text-center">
             <h3 class="text-white font-black tracking-[0.3em] text-xl mb-2 drop-shadow-[0_0_8px_rgba(229,9,20,0.5)]">YOANZ</h3>
             <p class="text-xs text-gray-500 tracking-widest uppercase mb-6">Creator & Developer</p>
-            <div class="flex flex-wrap justify-center items-center gap-3 text-[10px] text-gray-400 font-bold tracking-widest uppercase">
+            <div class="flex flex-wrap justify-center items-center gap-3 text-[10px] text-gray-400 font-bold tracking-widest uppercase px-4">
                 <span class="px-4 py-1.5 bg-cinema-900 border border-white/5 rounded-full hover:border-blood-primary/50 transition-colors">Vue 3</span>
                 <span class="px-4 py-1.5 bg-cinema-900 border border-white/5 rounded-full hover:border-blood-primary/50 transition-colors">Tailwind CSS</span>
                 <span class="px-4 py-1.5 bg-cinema-900 border border-white/5 rounded-full hover:border-blood-primary/50 transition-colors">Vanilla JS</span>
-                <span class="px-4 py-1.5 bg-cinema-900 border border-white/5 rounded-full hover:border-blood-primary/50 transition-colors">MangaDex API</span>
+                <span class="px-4 py-1.5 bg-cinema-900 border border-white/5 rounded-full hover:border-blood-primary/50 transition-colors">ComicK API</span>
                 <span class="px-4 py-1.5 bg-cinema-900 border border-white/5 rounded-full hover:border-blood-primary/50 transition-colors">PWA</span>
             </div>
         </footer>
@@ -116,10 +116,10 @@
                     </button>
 
                     <div class="flex flex-col md:flex-row gap-6 mb-8 mt-4 md:mt-0">
-                        <img :src="getCoverUrl(activeManga)" class="w-48 md:w-56 h-[300px] object-cover rounded-xl shadow-lg border border-white/5 mx-auto md:mx-0">
+                        <img :src="activeManga.cover" class="w-48 md:w-56 h-[300px] object-cover rounded-xl shadow-lg border border-white/5 mx-auto md:mx-0">
                         <div class="flex flex-col justify-center flex-1">
                             <h2 class="text-2xl md:text-4xl font-black text-white mb-2 leading-tight">{{ activeMangaTitle }}</h2>
-                            <p class="text-sm text-gray-400 line-clamp-4 mb-6 leading-relaxed">{{ activeManga.attributes.description?.en || 'Tidak ada sinopsis yang tersedia untuk manga ini.' }}</p>
+                            <p class="text-sm text-gray-400 line-clamp-4 mb-6 leading-relaxed">{{ activeManga.desc }}</p>
                             
                             <div class="flex flex-wrap gap-4 mt-auto">
                                 <button @click="lanjutBaca" class="px-6 py-3 bg-blood-primary text-white font-bold rounded-lg hover:bg-blood-glow transition-colors shadow-[0_0_15px_rgba(229,9,20,0.4)] flex items-center gap-2">
@@ -143,9 +143,9 @@
                     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 max-h-[350px] overflow-y-auto pr-2">
                         <button v-for="chap in sortedChapters" :key="chap.id" @click="bacaChapter(chap)"
                                 class="px-2 py-3 rounded-lg border font-semibold text-sm transition-all flex flex-col items-center justify-center gap-1"
-                                :class="getHistoryChapter(activeManga.id) == chap.attributes.chapter ? 'bg-blood-primary/20 border-blood-primary text-blood-primary' : 'bg-black/40 border-white/5 text-gray-300 hover:border-blood-primary/50 hover:bg-cinema-700'">
+                                :class="getHistoryChapter(activeManga.id) == chap.chapter ? 'bg-blood-primary/20 border-blood-primary text-blood-primary' : 'bg-black/40 border-white/5 text-gray-300 hover:border-blood-primary/50 hover:bg-cinema-700'">
                             <span class="text-gray-500 text-[10px] uppercase">Chapter</span>
-                            {{ chap.attributes.chapter }}
+                            {{ chap.chapter }}
                         </button>
                     </div>
                 </div>
@@ -166,7 +166,7 @@
                             {{ activeMangaTitle }}
                         </h2>
                         <p v-if="activeChapters[currentChapterIndex]" class="text-blood-primary tracking-widest text-sm uppercase mt-2 font-semibold drop-shadow-[0_0_5px_rgba(229,9,20,0.5)]">
-                            Chapter {{ activeChapters[currentChapterIndex].attributes.chapter }}
+                            Chapter {{ activeChapters[currentChapterIndex].chapter }}
                         </p>
                     </div>
 
@@ -202,4 +202,4 @@
 
     <script type="module" src="assets/js/app.js"></script>
 </body>
-</html>
+                        </html>
