@@ -1,4 +1,5 @@
-const BASE_URL = "https://api.comick.fun";
+const BASE_URL = "https://api.comick.app";
+const PROXY = "https://api.allorigins.win/raw?url=";
 
 export async function fetchMangaPopuler(searchQuery = "") {
     let url = `${BASE_URL}/v1.0/search?limit=30`;
@@ -6,17 +7,19 @@ export async function fetchMangaPopuler(searchQuery = "") {
     if (searchQuery && searchQuery.trim() !== "") {
         url += `&q=${encodeURIComponent(searchQuery)}`;
     } else {
-        url += `&sort=follow`; // Jika kosong, tampilkan yang trending
+        url += `&sort=follow`; 
     }
 
-    const res = await fetch(url);
+    const fetchUrl = PROXY + encodeURIComponent(url);
+
+    const res = await fetch(fetchUrl);
+    if (!res.ok) throw new Error("Gagal terhubung ke server komik.");
     const data = await res.json();
     
     if (!data || data.length === 0) {
         throw new Error("Manga tidak ditemukan.");
     }
     
-    // Format data agar seragam dan rapi saat dikirim ke aplikasi
     return data.map(m => {
         let coverImg = "https://via.placeholder.com/200x300/111111/e50914?text=Rema";
         if (m.cover_url) {
@@ -36,19 +39,18 @@ export async function fetchMangaPopuler(searchQuery = "") {
 }
 
 export async function fetchChapters(mangaId) {
-    // Coba ambil chapter bahasa Indonesia (id)
-    let res = await fetch(`${BASE_URL}/comic/${mangaId}/chapters?lang=id&limit=300`);
+    let urlId = `${BASE_URL}/comic/${mangaId}/chapters?lang=id&limit=300`;
+    let res = await fetch(PROXY + encodeURIComponent(urlId));
     let data = await res.json();
     let chapters = data.chapters || [];
 
-    // Jika chapter Indo kosong, coba ambil bahasa Inggris (en)
     if (chapters.length === 0) {
-        res = await fetch(`${BASE_URL}/comic/${mangaId}/chapters?lang=en&limit=300`);
+        let urlEn = `${BASE_URL}/comic/${mangaId}/chapters?lang=en&limit=300`;
+        res = await fetch(PROXY + encodeURIComponent(urlEn));
         data = await res.json();
         chapters = data.chapters || [];
     }
     
-    // Filter chapter yang valid dan format ulang datanya
     chapters = chapters.filter(c => c.chap).map(c => ({
         id: c.hid,
         chapter: c.chap,
@@ -56,19 +58,18 @@ export async function fetchChapters(mangaId) {
         lang: c.lang
     }));
 
-    // Urutkan dari chapter pertama ke terakhir (Ascending)
     chapters.sort((a, b) => parseFloat(a.chapter) - parseFloat(b.chapter));
-    
     return chapters;
 }
 
 export async function fetchChapterPages(chapterId) {
-    const res = await fetch(`${BASE_URL}/chapter/${chapterId}`);
+    const url = `${BASE_URL}/chapter/${chapterId}`;
+    const res = await fetch(PROXY + encodeURIComponent(url));
     const data = await res.json();
     
     if (!data.chapter || !data.chapter.images) {
-        throw new Error("Gagal mengambil data halaman komik.");
+        throw new Error("Gagal mengambil gambar halaman.");
     }
 
     return data.chapter.images.map(img => img.url);
-                    }
+            }
