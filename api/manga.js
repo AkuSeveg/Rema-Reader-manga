@@ -1,74 +1,54 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
-
-const TARGET_URL = 'https://kiryuu.id';
+const { Batoto } = require("mangascrape");
+const batoto = new Batoto();
 
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    
-    const { action, query, id } = req.query;
+    const { action, query, mangaId, chapterId } = req.query;
 
     try {
         if (action === 'search') {
-            const searchUrl = query ? `${TARGET_URL}/?s=${encodeURIComponent(query)}` : `${TARGET_URL}/manga/?order=popular`;
-            const { data } = await axios.get(searchUrl);
-            const $ = cheerio.load(data);
-            let results = [];
-
-            $('.bsx').each((i, el) => {
-                const title = $(el).find('.tt').text().trim();
-                const link = $(el).find('a').attr('href');
-                let cover = $(el).find('img').attr('src');
-                
-                const mangaId = link ? link.replace(TARGET_URL, '').replace('/manga/', '').replace(/\//g, '') : '';
-
-                if (title && mangaId) {
-                    if (!cover || cover.includes('data:image')) {
-                        cover = $(el).find('img').attr('data-src') || "https://via.placeholder.com/200x300/111111/e50914?text=Rema";
-                    }
-                    results.push({ id: mangaId, title, cover, status: 'Sub Indo' });
-                }
+            const searchRes = await batoto.search({ 
+                query: query || "Jujutsu Kaisen" 
             });
+            
+            if (!searchRes.results || searchRes.results.length === 0) {
+                return res.status(200).json([]);
+            }
+
+            const results = searchRes.results.map(m => ({
+                id: m.id,
+                title: m.title || m.name || "Tanpa Judul",
+                cover: m.cover || m.poster || "https://via.placeholder.com/200x300/111111/e50914?text=Rema",
+                status: 'Manga'
+            }));
+            
             return res.status(200).json(results);
         }
 
         if (action === 'chapters') {
-            const { data } = await axios.get(`${TARGET_URL}/manga/${id}/`);
-            const $ = cheerio.load(data);
-            let chapters = [];
+            const detailed = await batoto.id(mangaId);
+            if (!detailed || !detailed.chapters) throw new Error("Data chapter kosong");
 
-            $('#chapterlist li').each((i, el) => {
-                const chapText = $(el).find('.chapternum').text();
-                const chapNum = chapText.replace(/[^0-9.]/g, ''); 
-                const link = $(el).find('a').attr('href');
-                const chapterId = link ? link.replace(TARGET_URL, '').replace(/\//g, '') : '';
+            const chapters = detailed.chapters.map(c => ({
+                id: c.id,
+                chapter: c.chapter || c.title?.replace(/[^0-9.]/g, '') || "?",
+                title: c.title || "",
+            }));
 
-                if (chapNum && chapterId) {
-                    chapters.push({ id: chapterId, chapter: chapNum });
-                }
-            });
-            
+            // Urutkan dari chapter awal ke akhir
             chapters.sort((a, b) => parseFloat(a.chapter) - parseFloat(b.chapter));
             return res.status(200).json(chapters);
         }
 
         if (action === 'pages') {
-            const { data } = await axios.get(`${TARGET_URL}/${id}/`);
-            const $ = cheerio.load(data);
-            let pages = [];
-
-            $('#readerarea img').each((i, el) => {
-                let src = $(el).attr('src');
-                if (!src || src.includes('data:image')) {
-                    src = $(el).attr('data-src') || $(el).attr('data-lazy-src');
-                }
-                if (src) pages.push(src);
-            });
+            // Mangascrape butuh mangaId dan chapterId sekaligus
+            const pagesData = await batoto.chapter(mangaId, chapterId);
+            const pages = pagesData.map(p => typeof p === 'string' ? p : p.url || p.src);
             return res.status(200).json(pages);
         }
 
-        return res.status(400).json({ error: 'Perintah tidak dikenali.' });
+        return res.status(400).json({ error: 'Aksi tidak valid' });
     } catch (error) {
-        return res.status(500).json({ error: 'Gagal mengambil data dari target: ' + error.message });
+        return res.status(500).json({ error: error.message });
     }
 };
