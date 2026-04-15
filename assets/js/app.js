@@ -4,8 +4,8 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// UBAH IMPORT MENJADI api.js
-import { fetchMangaPopuler, fetchChapters, fetchChapterPages } from './api.js';
+// Tambahkan '?v=batoto' agar cache lama hancur
+import { fetchMangaPopuler, fetchChapters, fetchChapterPages } from './api.js?v=batoto';
 
 const { createApp, ref, onMounted, computed } = Vue;
 
@@ -47,7 +47,7 @@ createApp({
         });
 
         onMounted(() => {
-            cariManga('Jujutsu Kaisen'); // Default loading keren
+            cariManga('Jujutsu Kaisen');
         });
 
         async function cariManga(query = searchQuery.value) {
@@ -83,7 +83,7 @@ createApp({
             try {
                 const chapters = await fetchChapters(manga.id);
                 if (chapters.length === 0) {
-                    alert("Belum ada chapter terjemahan untuk manga ini.");
+                    alert("Chapter tidak ditemukan.");
                     return;
                 }
                 activeChapters.value = chapters;
@@ -91,7 +91,7 @@ createApp({
                 activeMangaTitle.value = manga.title;
                 isChapterListOpen.value = true;
             } catch (e) {
-                alert("Gagal mengambil daftar chapter.");
+                alert("Gagal mengambil daftar chapter: " + e.message);
             }
         }
 
@@ -125,7 +125,8 @@ createApp({
                 const chapterId = chapterData.id;
                 const chapterNum = chapterData.chapter;
 
-                currentPages.value = await fetchChapterPages(chapterId);
+                // UPDATE: Mengirimkan chapterId DAN mangaId sesuai format API Batoto
+                currentPages.value = await fetchChapterPages(chapterId, activeManga.value.id);
                 
                 readHistory.value[activeManga.value.id] = {
                     chapterId,
@@ -138,7 +139,7 @@ createApp({
                 const readerBox = document.getElementById('reader-box');
                 if (readerBox) readerBox.scrollTop = 0;
             } catch (e) {
-                errorMsg.value = "Gagal memuat gambar chapter.";
+                errorMsg.value = "Gagal memuat gambar: " + e.message;
             } finally {
                 isReaderLoading.value = false;
             }
