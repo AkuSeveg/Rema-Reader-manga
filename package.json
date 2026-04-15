@@ -1,13 +1,10 @@
-// package.json (Buat file baru di luar, sejajar dengan index.html)
 {
-  "name": "rema-scraper",
+  "name": "rema-backend",
   "version": "1.0.0",
-  "description": "Backend Scraper untuk Rema Manga",
   "scripts": {
     "start": "node api/manga.js"
   },
   "dependencies": {
-    "axios": "^1.6.2",
-    "cheerio": "^1.0.0-rc.12"
+    "mangascrape": "latest"
   }
 }
